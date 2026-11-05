@@ -1,7 +1,7 @@
 # AI Basics Tutorials
 Quick interactive tutorials for non-programmers.
 
-Built for busy people who are already encountering AI in their work but lack the conceptual foundations needed to use it effectively. 
+Built for busy people who are already encountering AI in their work but lack the foundational undertstanding that's needed to use it effectively. 
 
 There are two learning modules:
 - <b>How AI chatbots work:</b> tokens, chat history, system messages and thinking.
