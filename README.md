@@ -1,5 +1,11 @@
 # AI Basics Tutorials
 Quick interactive tutorials for non-programmers.
 
+Built for busy people who are already encountering AI in their work but lack the conceptual foundations to use it confidently. The aim is to help people become comfortable and competent in an AI-enabled world.
+
+There are two learning modules:
+- <b>How AI chatbots work:</b> tokens, chat history, system messages and thinking.
+- <b>How AI agents work:</b> agents, tools, harnesses, MCP and skills.
+
 Live demo:<br>
 https://ai-basics.woza.work/
