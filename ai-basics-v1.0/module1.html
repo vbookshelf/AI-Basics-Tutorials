@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How AI chatbots work</title>
+<style>
+:root{
+  --bg:#f3f6fb; --surface:#ffffff; --ink:#14213d; --muted:#55627f; --line:#d5dcea;
+  --accent:#2f5bea; --accent-ink:#ffffff; --good:#1f8a4c; --bad:#c23b3b;
+  --c1:#ffd6a5; --c2:#caffbf; --c3:#a0c4ff; --c4:#ffc6ff; --c5:#fdffb6; --chip-ink:#14213d;
+  --ai:#eef1f7; --hl:#fff1b8; color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#10162a; --surface:#1a2240; --ink:#eef2ff; --muted:#a3afd0; --line:#2f3a63;
+    --accent:#7d9bff; --accent-ink:#10162a; --good:#5fd08a; --bad:#ff8585;
+    --ai:#222c52; --hl:#5a4b12; color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html{height:auto}
+body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.55 "Trebuchet MS","Segoe UI",system-ui,sans-serif;
+  padding:env(safe-area-inset-top,0px) 16px calc(40px + env(safe-area-inset-bottom,0px))}
+main{max-width:720px;margin:0 auto}
+.brand{font-weight:700;color:var(--muted);margin:20px 0 10px}
+.home{color:var(--accent);text-decoration:none;margin-right:14px;padding-right:14px;border-right:2px solid var(--line)}
+.home:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
+.tabs{display:flex;flex-wrap:wrap;gap:8px}
+.tabs button{flex:1 1 150px;text-align:center}
+.tabs button[aria-current="page"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.part-title{font-size:clamp(2rem,6vw,3rem);line-height:1.1;margin:32px 0 12px;letter-spacing:-.02em}
+h3{font-size:1.4rem;margin:0 0 8px}
+p{margin:0 0 12px}
+.lead{font-size:1.2rem;color:var(--muted)}
+section{background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:22px;margin:24px 0}
+[hidden]{display:none!important}
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
+button{font:inherit;font-weight:700;color:var(--ink);background:var(--bg);border:2px solid var(--line);
+  border-radius:12px;padding:10px 14px;cursor:pointer;text-align:left}
+button:hover:not(:disabled){border-color:var(--accent)}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button.on,button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.pager{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:24px 0}
+.stage{min-height:70px;border:2px dashed var(--line);border-radius:14px;padding:14px;margin-top:10px}
+#part-tokens .stage{min-height:92px;margin-top:6px}
+.label{font-size:.9rem;color:var(--muted);margin-bottom:6px}
+.note{color:var(--muted);font-size:.95rem}
+.sentence{font-size:1.3rem;font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.chip{color:var(--chip-ink);border-radius:8px;padding:4px 9px;font-weight:700;white-space:pre;
+  font-family:"Courier New",monospace;animation:pop .25s ease both}
+.counts{display:flex;gap:24px;flex-wrap:wrap;margin-top:8px}
+.counts b{font-size:1.6rem}
+.line{border-radius:8px;padding:6px 10px;margin:6px 0;font-family:"Courier New",monospace;font-size:.95rem;
+  background:var(--ai);white-space:pre-wrap}
+.line.sys{background:var(--hl)}
+.line.new{animation:pop .3s ease both}
+#part-history .line.new{background:var(--hl)}
+.line.gone{text-decoration:line-through;opacity:.45}
+.line .tk{float:right;color:var(--muted);margin-left:10px}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){.chip,.line.new{animation:none}}
+.meter{height:16px;border-radius:8px;background:var(--ai);overflow:hidden;margin:6px 0 4px}
+.meter div{height:100%;background:var(--accent);transition:width .4s}
+.meter.full div{background:var(--bad)}
+.answer{margin-top:10px;font-weight:700}
+.line.think{font-style:italic;background:transparent;border:1px dashed var(--muted)}
+.stack{display:flex;height:16px;border-radius:8px;overflow:hidden;background:var(--ai);margin:8px 0}
+.stack div{height:100%;transition:width .4s}
+.stack .th{background:var(--accent)}
+.stack .an{background:var(--good)}
+.legend{font-size:.9rem;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:4px}
+</style>
+</head>
+<body>
+<main>
+<div class="brand"><a class="home" href="index.html">Home</a>How AI chatbots work</div>
+<nav class="tabs" aria-label="Lessons">
+  <button data-go="tokens">1. Tokens</button>
+  <button data-go="history">2. Chat history</button>
+  <button data-go="system">3. System message</button>
+  <button data-go="thinking">4. Thinking</button>
+</nav>
+<div id="part-tokens">
+<h2 class="part-title">What is a token?</h2>
+<p class="lead">When you chat with an AI, it doesn’t read words the way you do. It reads tokens. Let’s see what that means.</p>
+
+<section>
+  <h3>Step 1: The AI chops text into pieces</h3>
+  <p>A token is a small chunk of text. Sometimes it’s a whole word, sometimes just part of one. Pick a sentence and watch it get chopped.</p>
+  <div class="btns" id="sentBtns"></div>
+  <div class="stage" aria-live="polite">
+    <div class="label">What you write</div>
+    <div class="sentence" id="orig">Pick a sentence above</div>
+    <div class="label" style="margin-top:12px">What the AI sees</div>
+    <div class="chips" id="chips"></div>
+    <div class="counts">
+      <div><b id="nChars">–</b><br><span class="note">characters</span></div>
+      <div><b id="nTok">–</b><br><span class="note">tokens</span></div>
+    </div>
+    <p class="note" id="why" style="margin:10px 0 0"></p>
+  </div>
+  <p class="note" style="margin-top:12px">These splits are simplified examples. Real AI tokenizers cut text slightly differently, but the idea is the same.</p>
+</section>
+
+
+<section>
+  <h3>Step 2: Why can’t AI count letters?</h3>
+  <p>The AI never sees individual letters, only tokens. Try asking it a letter question:</p>
+  <div class="btns"><button class="primary" id="strawBtn">How many r’s are in “strawberry”?</button></div>
+  <div class="stage" aria-live="polite" id="strawOut"><span class="note">Press the button.</span></div>
+</section>
+
+<section>
+  <h3>Why this matters</h3>
+  <p>Tokens are how the AI world counts things. Two big ideas depend on them: <b>cost</b> and <b>speed</b>.</p>
+  <p><b>Cost.</b> AI companies charge by the token. You pay for the tokens you send in and for the tokens the AI writes back. More tokens, bigger bill.</p>
+  <p><b>Speed.</b> An AI writes its answer one token at a time. Its speed is measured in tokens per second - the number of tokens it can generate in one second.</p>
+</section>
+<div class="pager"><span></span><button class="primary" data-go="history">Next: Chat history</button></div>
+</div>
+<div id="part-history" hidden>
+<h2 class="part-title">Does the AI remember you?</h2>
+<p class="lead">An AI model doesn't have memory, but it still knows what you said in past messages. Let’s see what’s really going on.</p>
+
+<section>
+  <h3>Step 1: The whole chat is sent every time</h3>
+  <p>Chat with this pretend bot by pressing the buttons. Watch the box below: it shows everything the AI receives each time you send a message. The newest lines are highlighted in yellow.</p>
+  <div class="btns" id="sayBtns"></div>
+  <div class="label" style="margin-top:4px">What the AI receives right now: <b id="recvCount">0</b> messages</div>
+  <div class="stage" id="recv" aria-live="polite"><span class="note">Nothing yet.</span></div>
+  <div class="btns"><button id="reset1">Start a new chat</button></div>
+  <p class="note">Each time you send a new message, all your old messages are sent with it. Before answering, the AI reads all messages from the oldest to the newest. The old messages are called the chat history.</p>
+</section>
+
+<section>
+  <h3>Step 2: The AI can only read so much</h3>
+  <p>The AI can only take in a limited amount of text at once. This limit is called the <b>context window</b>, and it’s measured in tokens. In this demo the window is tiny (just 40 tokens) so you can see what happens when a chat gets too long.</p>
+  <div class="btns">
+    <button class="primary" id="nextBtn">Send next message</button>
+    <button id="askBtn">Ask: What’s my name?</button>
+    <button id="reset2">Start over</button>
+  </div>
+  <div class="label">Context window: <b id="used">0</b> of 40 tokens used</div>
+  <div class="meter" id="meter"><div style="width:0"></div></div>
+  <div class="stage" id="win" aria-live="polite"><span class="note">Press “Send next message” to start the chat.</span></div>
+  <div class="answer" id="ans" aria-live="polite"></div>
+  <p class="note" style="margin-top:12px">Crossed-out messages were deleted. The AI can’t see them anymore, so for the AI they never happened.</p>
+</section>
+
+<section>
+  <h3>Why this matters</h3>
+  <p><b>Memory is an illusion.</b> The AI receives the entire chat history along with every new message.</p>
+  <p><b>The cost per request keeps increasing.</b> This is because the number of tokens in the chat history keeps increasing. Also, the AI may take longer to respond when the chat history gets very large.</p>
+  <p><b>Old details get lost.</b> In a very long chat, early messages can get deleted. This can confuse the AI.</p>
+</section>
+<div class="pager"><button data-go="tokens">Back: Tokens</button><button class="primary" data-go="system">Next: System message</button></div>
+</div>
+<div id="part-system" hidden>
+<h2 class="part-title">The AI’s secret instructions</h2>
+<p class="lead">Before you type a single word, the AI has already been told how to behave. That hidden first message is called the system message.</p>
+
+<section>
+  <h3>Step 1: Pick the instructions</h3>
+  <p>The system message is written by whoever builds the chatbot. Pick one to use in the step 2 demo:</p>
+  <div class="btns" id="sysBtns"></div>
+  <div class="stage" id="sysOut" aria-live="polite"><span class="note">Pick an instruction above.</span></div>
+</section>
+
+<section>
+  <h3>Step 2: Ask a question</h3>
+  <p>Now ask the AI something. Then go back and change the instructions, and ask the same question again.</p>
+  <div class="btns" id="qBtns"></div>
+  <div class="label">What the AI receives, from top to bottom</div>
+  <div class="stage" id="sysRecv" aria-live="polite"><span class="note">Pick instructions in Step 1 and a question here.</span></div>
+  <p class="note" style="margin-top:12px">The yellow line is the system message. In most chat apps you can’t see it, but the AI always reads it first. The AI is trained to follow the instructions given in the system message.</p>
+</section>
+
+<section>
+  <h3>Why this matters</h3>
+  <p><b>One AI, many jobs.</b> Companies use system messages to turn the same AI model into a homework helper, a shop assistant or a game character.</p>
+  <p><b>It comes first, every time.</b> The system message sits at the top of the chat history, so the AI reads it again with every message you send.</p>
+  <p><b>It uses tokens.</b> The entire conversation history is sent to the AI with every new message. The system message is included in this history. A long system message takes up room in the context window and adds to the cost.</p>
+</section>
+<div class="pager"><button data-go="history">Back: Chat history</button><button class="primary" data-go="thinking">Next: Thinking</button></div>
+</div>
+<div id="part-thinking" hidden>
+<h2 class="part-title">Thinking before answering</h2>
+<p class="lead">Some AI models can “think” before they answer. They are called "Reasoning" models. This ability makes AI better at answering hard questions. It isn't free. Let’s see how this works.</p>
+
+<section>
+  <h3>Step 1: What is thinking?</h3>
+  <p>With thinking turned on, the AI first talks to itself, working through the problem out loud. Reasoning allows the AI to consider multiple options and catch its own mistakes. After it finishes thinking, it outputs an answer. Pick a question, then see how the output changes when thinking is turned on and off:</p>
+  <div class="btns" id="tqBtns"></div>
+  <div class="btns" id="tmBtns"></div>
+  <div class="stage" id="thinkOut" aria-live="polite"><span class="note">Pick a question and a mode.</span></div>
+  <p class="note" id="thinkNote" style="margin-top:12px"></p>
+
+</section>
+
+<section>
+  <h3>Step 2: Set the reasoning level</h3>
+  <p>You can adjust how much the AI thinks. In a chat app there is often an effort level setting (low, medium, high) or a “think longer” option. Sometimes it's possible to set a thinking budget, which is a cap on how many thinking tokens the AI is allowed to use. Try the levels:</p>
+  
+  <div class="btns" id="dialBtns"></div>
+  <div class="stage" id="dialOut" aria-live="polite"><span class="note">Pick a level.</span></div>
+  
+  <p class="note" style="margin-top:12px">The values shown for each level are just examples to illustrate the idea.</p>
+ 
+
+</section>
+
+<section>
+  <h3>Why this matters</h3>
+  <p><b>Pricing:</b> The total cost is calculated by adding the cost of the thinking tokens to the cost of the input tokens and the cost of the answer (output) tokens. Even if you don't see the thinking tokens, you still pay for them. Currently, the thinking text is not included in the chat history, but this may change in the future.</p>
+  <p><b>Speed:</b> When thinking is turned on, you will have to wait longer for an answer.</p>
+  <p><b>Use it for hard questions.</b> Thinking helps most with complex problems like math, coding and rendering 3D worlds.</p>
+  <p><b>It’s not a guarantee.</b> Thinking makes a correct answer more likely, but the AI can still be wrong.</p>
+</section>
+<div class="pager"><button data-go="system">Back: System message</button></div>
+</div>
+</main>
+<script>
+(function(){
+var COLORS=["--c1","--c2","--c3","--c4","--c5"];
+var SENT=[
+ {t:"I love pizza",p:["I"," love"," pizza"],why:"Short, common words: one token each."},
+ {t:"The cat sat on the mat.",p:["The"," cat"," sat"," on"," the"," mat","."],why:"Even the full stop is its own token. Spaces usually stick to the front of a word."},
+ {t:"Unbelievable!",p:["Un","belie","vable","!"],why:"One long word, but four tokens. It got chopped into pieces."},
+ {t:"The quick brown fox jumps over the lazy dog",p:["The"," quick"," brown"," fox"," jumps"," over"," the"," lazy"," dog"],why:"Nine common words, nine tokens. Common words rarely get chopped."},
+ {t:"Supercalifragilisticexpialidocious",p:["Super","cal","if","rag","ilis","tic","exp","ial","id","oc","ious"],why:"One huge made-up word becomes eleven tokens. Rare words get chopped into many small pieces."},
+ {t:"Hello 😀",p:["Hello"," ","😀"],why:"Emojis are tokens too, and they often take more than one."},
+ {t:"2026",p:["202","6"],why:"Numbers get chopped up as well. The AI doesn’t see “two thousand twenty-six”."}
+];
+function chipsHTML(parts){
+  return parts.map(function(s,i){
+    return '<span class="chip" style="background:var('+COLORS[i%5]+');animation-delay:'+(i*70)+'ms">'+
+      s.replace(/ /g,"␣").replace(/</g,"&lt;")+'</span>';
+  }).join("");
+}
+var sb=document.getElementById("sentBtns");
+SENT.forEach(function(s,i){
+  var b=document.createElement("button");b.textContent=s.t;
+  b.onclick=function(){
+    [].forEach.call(sb.children,function(x){x.classList.remove("on")});b.classList.add("on");
+    document.getElementById("orig").textContent=s.t;
+    document.getElementById("chips").innerHTML=chipsHTML(s.p);
+    document.getElementById("nChars").textContent=s.t.length;
+    document.getElementById("nTok").textContent=s.p.length;
+    document.getElementById("why").textContent=s.why+" (␣ marks a space.)";
+  };
+  sb.appendChild(b);
+});
+document.getElementById("strawBtn").onclick=function(){
+  document.getElementById("strawOut").innerHTML=
+   '<div class="label">What you see</div><div class="sentence">s t r a w b e r r y</div>'+
+   '<div class="label" style="margin-top:12px">What the AI sees</div><div class="chips">'+chipsHTML(["str","aw","berry"])+'</div>'+
+   '<p style="margin-top:8px">Three chunks. The letters inside each chunk are hidden from it, so counting r’s is a guess, not a real count. That’s why AI sometimes gets this wrong.</p>';
+};
+})();
+(function(){
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+
+/* Step 1 */
+var SAY=[
+ {t:"Hi! My name is Sam.",r:"Nice to meet you, Sam!",k:"name"},
+ {t:"My favorite animal is the octopus.",r:"Octopuses are amazing. They have three hearts!",k:"animal"},
+ {t:"What’s my name?",q:"name",yes:"Your name is Sam.",no:"I don’t know yet. You haven’t told me your name."},
+ {t:"What’s my favorite animal?",q:"animal",yes:"It’s the octopus!",no:"I don’t know yet. You haven’t told me."}
+];
+var hist=[];
+function render1(newCount){
+  var recv=document.getElementById("recv");
+  if(!hist.length){
+    recv.innerHTML='<span class="note">Nothing yet.</span>';
+    document.getElementById("recvCount").textContent=0;return;
+  }
+  recv.innerHTML=hist.map(function(m,i){
+    var isNew=i>=hist.length-newCount;
+    return '<div class="line'+(isNew?' new':'')+'">'+m.who+': '+esc(m.text)+'</div>';
+  }).join("");
+  document.getElementById("recvCount").textContent=hist.length;
+}
+var sb=document.getElementById("sayBtns");
+SAY.forEach(function(s){
+  var b=document.createElement("button");b.textContent=s.t;
+  b.onclick=function(){
+    var reply=s.r;
+    if(s.q){
+      var known=hist.some(function(m){return m.key===s.q});
+      reply=known?s.yes:s.no;
+    }
+    hist.push({who:"You",text:s.t,key:s.k});
+    hist.push({who:"AI",text:reply});
+    render1(2);
+  };
+  sb.appendChild(b);
+});
+document.getElementById("reset1").onclick=function(){hist=[];render1(0)};
+
+/* Step 2 */
+var LIMIT=40;
+var SCRIPT=[
+ {who:"You",text:"Hi! My name is Sam.",tk:7},
+ {who:"AI",text:"Nice to meet you, Sam!",tk:7},
+ {who:"You",text:"What’s the tallest mountain on Earth?",tk:8},
+ {who:"AI",text:"Mount Everest, at about 8,849 metres.",tk:11},
+ {who:"You",text:"And the longest river?",tk:6},
+ {who:"AI",text:"The Nile is often named the longest.",tk:9},
+ {who:"You",text:"Cool. Which is the biggest ocean?",tk:8},
+ {who:"AI",text:"The Pacific Ocean.",tk:5}
+];
+var sent=0,from=0;
+function render2(){
+  var win=document.getElementById("win");
+  if(!sent){
+    win.innerHTML='<span class="note">Press “Send next message” to start the chat.</span>';
+  }else{
+    win.innerHTML=SCRIPT.slice(0,sent).map(function(m,i){
+      return '<div class="line'+(i<from?' gone':'')+'"><span class="tk">'+m.tk+' tokens</span>'+m.who+': '+esc(m.text)+'</div>';
+    }).join("");
+  }
+  var used=0;for(var i=from;i<sent;i++)used+=SCRIPT[i].tk;
+  document.getElementById("used").textContent=used;
+  var mt=document.getElementById("meter");
+  mt.firstElementChild.style.width=Math.min(100,used/LIMIT*100)+"%";
+  mt.className="meter"+(used>=LIMIT-6?" full":"");
+  document.getElementById("nextBtn").disabled=sent>=SCRIPT.length;
+  document.getElementById("askBtn").disabled=sent===0;
+}
+document.getElementById("nextBtn").onclick=function(){
+  sent+=2;
+  var total=0;for(var i=from;i<sent;i++)total+=SCRIPT[i].tk;
+  while(total>LIMIT){total-=SCRIPT[from].tk;from++}
+  document.getElementById("ans").textContent="";
+  render2();
+};
+document.getElementById("askBtn").onclick=function(){
+  var a=document.getElementById("ans");
+  a.style.color=from===0?"var(--good)":"var(--bad)";
+  a.textContent=from===0?"AI: Your name is Sam."
+    :"AI: Sorry, I don’t know your name. (Your first message was deleted.)";
+};
+document.getElementById("reset2").onclick=function(){
+  sent=0;from=0;document.getElementById("ans").textContent="";render2();
+};
+render2();
+})();
+(function(){
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+var SYS=[
+ {id:"none",name:"No instructions",text:""},
+ {id:"pirate",name:"Pirate",text:"You are a pirate. Talk like a pirate in every answer."},
+ {id:"teacher",name:"Strict teacher",text:"You are a strict teacher. Give short answers and always end by giving the student homework."},
+ {id:"haiku",name:"Haiku only",text:"Answer only in haiku: three short lines."}
+];
+var QS=[
+ {id:"sky",text:"Why is the sky blue?"},
+ {id:"sand",text:"How do I make a sandwich?"}
+];
+var R={
+ none:{sky:"Sunlight is made of many colors. The air scatters blue light the most, so the sky looks blue.",
+       sand:"Put your filling between two slices of bread. Add toppings like lettuce or tomato, then close it up."},
+ pirate:{sky:"Arr, matey! The sunlight hits the air and the blue light be scattered all around, so the sky looks blue as the sea!",
+         sand:"Arr! Lay two slices o’ bread on yer deck, pile on the booty (cheese and ham be fine), and slap ’em together. Now eat, ye scallywag!"},
+ teacher:{sky:"Air scatters blue light more than other colors. Now write down why sunsets are red. Due tomorrow.",
+          sand:"Bread, filling, bread. It isn’t hard. Now write the steps in your notebook. Due tomorrow."},
+ haiku:{sky:"Blue light scatters wide\nSunlight meets the air above\nSo the sky looks blue",
+        sand:"Two slices of bread\nCheese and tomato between\nPress down, and then eat"}
+};
+var sys=null,q=null;
+function mark(box,i){[].forEach.call(box.children,function(b,j){b.classList.toggle("on",i===j)})}
+function render(){
+  var out=document.getElementById("sysOut"),recv=document.getElementById("sysRecv");
+  if(!sys){
+    out.innerHTML='<span class="note">Pick an instruction above.</span>';
+    recv.innerHTML='<span class="note">Pick instructions in Step 1 and a question here.</span>';return;
+  }
+  out.innerHTML=sys.text
+    ?'<div class="label">The AI has been told:</div><div class="line sys">'+esc(sys.text)+'</div>'
+    :'<div class="label">The AI has been told:</div><div class="line">(nothing, so it just answers normally)</div>';
+  if(!q){recv.innerHTML='<span class="note">Now pick a question.</span>';return;}
+  recv.innerHTML=
+    '<div class="line sys new">System: '+(sys.text?esc(sys.text):'(nothing)')+'</div>'+
+    '<div class="line new">You: '+esc(q.text)+'</div>'+
+    '<div class="line new">AI: '+esc(R[sys.id][q.id])+'</div>';
+}
+var sb=document.getElementById("sysBtns");
+SYS.forEach(function(s,i){
+  var b=document.createElement("button");b.textContent=s.name;
+  b.onclick=function(){sys=s;mark(sb,i);render()};
+  sb.appendChild(b);
+});
+var qb=document.getElementById("qBtns");
+QS.forEach(function(x,i){
+  var b=document.createElement("button");b.textContent=x.text;
+  b.onclick=function(){q=x;mark(qb,i);render()};
+  qb.appendChild(b);
+});
+})();
+(function(){
+  function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+  var QS=[
+   {t:"What’s the capital of France?",
+    off:{a:"Paris."},
+    on:{th:["Okay, they want the capital of France.","That’s Paris."],a:"Paris."},
+    noteOff:"Quick and correct. Easy questions don’t need thinking.",
+    noteOn:"Same answer as when thinking is off, but it cost more because the AI used thinking tokens."},
+   {t:"A bat and a ball cost $1.10 together. The bat costs $1.00 more than the ball. How much is the ball?",
+    off:{a:"The ball costs 10 cents."},
+    on:{th:["Hmm, let’s say the ball costs x. Then the bat costs x + $1.00.","Together that’s x + (x + $1.00) = $1.10.","So 2x = $0.10, which means x = $0.05.","Let me check: 5 cents + $1.05 = $1.10. Yes!"],a:"The ball costs 5 cents."},
+    noteOff:"Fast, but wrong. Without room to think, the AI blurted out the first answer that came to mind.",
+    noteOn:"Correct. Talking it through gave the AI room to check it's work and get the correct answer."}
+  ];
+  var q=null,mode=null;
+  function mark(box,i){[].forEach.call(box.children,function(b,j){b.classList.toggle("on",i===j)})}
+  function render(){
+    var out=document.getElementById("thinkOut"),note=document.getElementById("thinkNote");
+    if(q===null||mode===null){out.innerHTML='<span class="note">Pick a question and a mode.</span>';note.textContent="";return;}
+    var Q=QS[q],r=Q[mode],h='<div class="line new">You: '+esc(Q.t)+'</div>';
+    if(mode==="on"){
+      h+='<div class="label" style="margin-top:10px">Thinking (the AI talking to itself)</div>'+
+        r.th.map(function(x){return '<div class="line think new">'+esc(x)+'</div>'}).join("");
+    }
+    h+='<div class="label" style="margin-top:10px">The answer you see</div><div class="line new">AI: '+esc(r.a)+'</div>';
+    out.innerHTML=h;
+    note.textContent=mode==="on"?Q.noteOn:Q.noteOff;
+  }
+  var qb=document.getElementById("tqBtns"),mb=document.getElementById("tmBtns");
+  QS.forEach(function(x,i){
+    var b=document.createElement("button");b.textContent=x.t;
+    b.onclick=function(){q=i;mark(qb,i);render()};qb.appendChild(b);
+  });
+  [["Thinking off","off"],["Thinking on","on"]].forEach(function(m,i){
+    var b=document.createElement("button");b.textContent=m[0];
+    b.onclick=function(){mode=m[1];mark(mb,i);render()};mb.appendChild(b);
+  });
+
+  var LV=[{n:"Off",t:0},{n:"Low",t:200},{n:"Medium",t:1000},{n:"High",t:4000}];
+  var ANS=50,SPEED=50,PRICE=10,MAX=4050;
+  var db=document.getElementById("dialBtns");
+  function secs(x){return (x<10?x.toFixed(1):Math.round(x))+" s"}
+  LV.forEach(function(l,i){
+    var b=document.createElement("button");b.textContent=l.n;
+    b.onclick=function(){
+      mark(db,i);
+      var total=l.t+ANS,cost=total*PRICE/1000000;
+      document.getElementById("dialOut").innerHTML=
+        '<div class="stack"><div class="th" style="width:'+(l.t/MAX*100)+'%"></div><div class="an" style="width:'+(ANS/MAX*100)+'%"></div></div>'+
+        '<div class="legend"><i style="background:var(--accent)"></i>thinking tokens &nbsp; <i style="background:var(--good)"></i>answer tokens</div>'+
+        '<div class="counts"><div><b>'+l.t+'</b><br><span class="note">thinking tokens</span></div>'+
+        '<div><b>'+secs(l.t/SPEED)+'</b><br><span class="note">wait before the answer starts</span></div>'+
+        '<div><b>$'+(cost<0.01?cost.toFixed(4):cost.toFixed(3))+'</b><br><span class="note">cost of the reply</span></div></div>';
+    };
+    db.appendChild(b);
+  });
+})();
+(function(){
+  var NAMES=["tokens","history","system","thinking"];
+  var tabs=document.querySelectorAll(".tabs button");
+  function show(n){
+    if(NAMES.indexOf(n)<0)n="tokens";
+    NAMES.forEach(function(x){document.getElementById("part-"+x).hidden=(x!==n)});
+    [].forEach.call(tabs,function(b){
+      if(b.getAttribute("data-go")===n)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current");
+    });
+    window.scrollTo(0,0);
+  }
+  [].forEach.call(document.querySelectorAll("[data-go]"),function(b){
+    b.addEventListener("click",function(){
+      var n=b.getAttribute("data-go");
+      if(location.hash.slice(1)===n)show(n);else location.hash=n;
+    });
+  });
+  window.addEventListener("hashchange",function(){show(location.hash.slice(1))});
+  show(location.hash.slice(1));
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>How AI agents work</title>
+<style>
+:root{
+  --bg:#f3f6fb; --surface:#ffffff; --ink:#14213d; --muted:#55627f; --line:#d5dcea;
+  --accent:#2f5bea; --accent-ink:#ffffff; --good:#1f8a4c; --bad:#c23b3b;
+  --c1:#ffd6a5; --c2:#caffbf; --c3:#a0c4ff; --c4:#ffc6ff; --c5:#fdffb6; --chip-ink:#14213d;
+  --ai:#eef1f7; --hl:#fff1b8; color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#10162a; --surface:#1a2240; --ink:#eef2ff; --muted:#a3afd0; --line:#2f3a63;
+    --accent:#7d9bff; --accent-ink:#10162a; --good:#5fd08a; --bad:#ff8585;
+    --ai:#222c52; --hl:#5a4b12; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10162a; --surface:#1a2240; --ink:#eef2ff; --muted:#a3afd0; --line:#2f3a63;
+  --accent:#7d9bff; --accent-ink:#10162a; --good:#5fd08a; --bad:#ff8585;
+  --ai:#222c52; --hl:#5a4b12; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{height:auto}
+body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.55 "Trebuchet MS","Segoe UI",system-ui,sans-serif;
+  padding:env(safe-area-inset-top,0px) 16px calc(40px + env(safe-area-inset-bottom,0px))}
+main{max-width:720px;margin:0 auto}
+.brand{font-weight:700;color:var(--muted);margin:20px 0 10px}
+.home{color:var(--accent);text-decoration:none;margin-right:14px;padding-right:14px;border-right:2px solid var(--line)}
+.home:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
+.tabs{display:flex;flex-wrap:wrap;gap:8px}
+.tabs button{flex:1 1 130px;text-align:center}
+.tabs button[aria-current="page"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.part-title{font-size:clamp(2rem,6vw,3rem);line-height:1.1;margin:32px 0 12px;letter-spacing:-.02em}
+h3{font-size:1.4rem;margin:0 0 8px}
+p{margin:0 0 12px}
+.lead{font-size:1.2rem;color:var(--muted)}
+section{background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:22px;margin:24px 0}
+[hidden]{display:none!important}
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
+button{font:inherit;font-weight:700;color:var(--ink);background:var(--bg);border:2px solid var(--line);
+  border-radius:12px;padding:10px 14px;cursor:pointer;text-align:left}
+button:hover:not(:disabled){border-color:var(--accent)}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button.on,button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.pager{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:24px 0}
+.stage{min-height:70px;border:2px dashed var(--line);border-radius:14px;padding:14px;margin-top:10px}
+.label{font-size:.9rem;color:var(--muted);margin-bottom:6px}
+.note{color:var(--muted);font-size:.95rem}
+.line{border-radius:8px;padding:6px 10px;margin:6px 0;font-family:"Courier New",monospace;font-size:.95rem;
+  background:var(--ai);white-space:pre-wrap}
+.line.new{animation:pop .3s ease both}
+.line.you{background:var(--hl)}
+@keyframes pop{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){.line.new{animation:none}}
+.tag{display:inline-block;min-width:78px;text-align:center;font-weight:700;border-radius:6px;padding:0 8px;margin-right:8px;
+  color:var(--chip-ink);font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif}
+.t-Think{background:var(--c3)} .t-Act{background:var(--c1)} .t-Observe{background:var(--c2)} .t-Answer{background:var(--c5)}
+.pills{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+.pill{padding:6px 14px;border-radius:999px;border:2px solid var(--line);font-weight:700;color:var(--muted)}
+.pill.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.arrow{color:var(--muted);font-weight:700}
+.answer{margin-top:10px;font-weight:700}
+.compare-h{font-weight:700;margin:14px 0 0}
+.t-You{background:var(--c5)} .t-AI{background:var(--c3)} .t-Computer{background:var(--c4)} .t-Harness{background:var(--c2)}
+.job{border:2px solid var(--line);border-radius:12px;padding:10px 12px;margin:10px 0}
+.job .btns{margin:8px 0 0}
+.res{margin-top:8px;font-size:.95rem}
+.res.ok{color:var(--good);font-weight:700}
+.res.no{color:var(--bad);font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.chip{color:var(--chip-ink);border-radius:8px;padding:4px 9px;font-weight:700;font-family:"Courier New",monospace;font-size:.9rem}
+.meter{height:16px;border-radius:8px;background:var(--ai);overflow:hidden;margin:6px 0 4px}
+.meter div{height:100%;background:var(--accent);transition:width .4s}
+.meter.full div{background:var(--bad)}
+.line .tk{float:right;color:var(--muted);margin-left:10px}
+.file{border:2px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.file-h{background:var(--ai);padding:6px 12px;font-family:"Courier New",monospace;font-weight:700;font-size:.95rem;border-bottom:2px solid var(--line)}
+.blk{padding:8px 12px;font-family:"Courier New",monospace;font-size:.95rem;white-space:pre-wrap;overflow-wrap:anywhere}
+.blk.top{background:var(--hl);border-bottom:2px solid var(--line)}
+.blk-label{font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif;font-size:.85rem;font-weight:700;color:var(--muted);margin-bottom:4px}
+.blk.top .blk-label{color:var(--ink)}
+</style>
+</head>
+<body>
+<main>
+<div class="brand"><a class="home" href="index.html">Home</a>How AI agents work</div>
+<nav class="tabs" aria-label="Lessons">
+  <button data-go="agent" aria-current="page">1. What is an agent?</button>
+  <button data-go="tools">2. Tools</button>
+  <button data-go="harness">3. Harness</button>
+  <button data-go="mcp">4. MCP</button>
+  <button data-go="skills">5. Skills</button>
+</nav>
+
+<div id="part-agent">
+<h2 class="part-title">What is an agent?</h2>
+<p class="lead">In the first tutorial, you sent a message and the AI sent one reply. An agent does more: it keeps working, one step at a time, until the job is done.</p>
+
+<section>
+  <h3>Step 1: One reply or many steps?</h3>
+  <p>Pick a question and see how a plain chatbot and an agent each handle it.</p>
+  <div class="btns" id="taskBtns"></div>
+  <div class="stage" id="cmp" aria-live="polite"><span class="note">Pick a question above.</span></div>
+  <p class="note" style="margin-top:12px">A chatbot can only use what it already knows. But an agent can go and find out.</p>
+</section>
+
+<section>
+  <h3>Step 2: The agent loop</h3>
+  <p>An agent works in a loop with three moves. Press the button to watch one agent finish a real job: <b>book a table for 4 at a pizza place tonight.</b></p>
+  <div class="pills" aria-hidden="true">
+    <span class="pill" id="p-Think">Think</span><span class="arrow">→</span>
+    <span class="pill" id="p-Act">Act</span><span class="arrow">→</span>
+    <span class="pill" id="p-Observe">Observe</span><span class="arrow">↻</span>
+  </div>
+  <div class="label" id="loopLabel">Loop 0 of 4</div>
+  <div class="stage" id="log" aria-live="polite"><span class="note">Press “Next step” to start.</span></div>
+  <div class="btns">
+    <button class="primary" id="nextBtn">Next step</button>
+    <button id="resetBtn">Start over</button>
+  </div>
+  <div class="answer" id="loopAns" aria-live="polite"></div>
+  <p class="note" style="margin-top:12px"><b>Think:</b> decide what to do next. <b>Act:</b> do it. <b>Observe:</b> look at what happened.</p>
+</section>
+
+<section>
+  <h3>Why this matters</h3>
+  <p><b>An agent is an AI with a goal and a loop.</b> You say what you want, and it decides the steps. A chatbot answers. An agent gets things done.</p>
+  <p><b>It adapts.</b> When 7:00 was full, the agent didn’t give up. What it observed changed its next move.</p>
+  <p><b>Every loop adds to the chat history.</b> Each thought, action and result gets added to the conversation, so long jobs use more tokens, cost more and fill up the context window.</p>
+  <p>But who actually does the “Act” part? The AI model only writes text. Tools turn that text into real actions.</p>
+</section>
+<div class="pager"><span></span><button class="primary" data-go="tools">Next: Tools</button></div>
+</div>
+
+<div id="part-tools" hidden>
+<h2 class="part-title">Tools</h2>
+<p class="lead">An AI model only writes text. So how can an agent look up the weather or book a table? It uses tools.</p>
+
+<section>
+  <h3>Step 1: Give the AI some tools</h3>
+  <p>A tool is something the AI can ask for help, like a calculator or a weather service. In this exercise, try the same question with the tool on and off.</p>
+  <div class="label">Tools: <b id="tlCount">0</b> of 3 switched on</div>
+  <div class="btns" id="tlToggles" style="margin-top:0"></div>
+  <div class="label">Ask a question</div>
+  <div class="btns" id="tlQs" style="margin-top:0"></div>
+  <div class="stage" id="tlOut" aria-live="polite"><span class="note">Pick a question above.</span></div>
+  <p class="note" style="margin-top:12px">Without the right tool, the AI can only guess. With it, the AI can get the real answer.</p>
+</section>
+
+<section>
+  <h3>Step 2: Who actually runs the tool?</h3>
+  <p>The AI can’t press buttons or call a weather service. It can only write text. So how does a tool get used? It starts with a list. Before you type anything, the AI is given a list of tools that are available. The list sits at the top of what the AI reads, next to the system message. Each tool says what it does and what information it needs. Here is one entry from that list:</p>
+  <div class="line">get_forecast: Looks up the weather forecast. Needs: city, day.</div>
+  <p style="margin-top:12px">Because the AI reads this, it knows the tool exists and what information to send. Press the button and watch who does what.</p>
+  <div class="pills" aria-hidden="true">
+    <span class="pill" id="a-You">You</span><span class="arrow">→</span>
+    <span class="pill" id="a-AI">AI</span><span class="arrow">⇄</span>
+    <span class="pill" id="a-Computer">Computer</span>
+  </div>
+  <div class="label" id="tcLabel">Step 0 of 6</div>
+  <div class="stage" id="tcLog" aria-live="polite"><span class="note">Press “Next step” to start.</span></div>
+  <div class="btns">
+    <button class="primary" id="tcNext">Next step</button>
+    <button id="tcReset">Start over</button>
+  </div>
+  <div class="answer" id="tcAns" aria-live="polite"></div>
+
+</section>
+
+<section>
+  <h3>Why this matters</h3>
+  <p><b>Tools turn words into actions.</b> The AI asks, and something else does the work. That is how an agent can search the web, check the weather and delete files.</p>
+  <p><b>The right tool beats a guess.</b> For exact maths or live facts, a tool gives a real answer. Without it, the AI gives its best guess.</p>
+  <p><b>The AI has a list of available tools.</b> The list says what each tool does and what information it needs. The AI reads this list every time, so it takes up room in the context window and uses tokens, just like the system message.</p>
+  <p><b>Results go into the chat history.</b> Each tool result is added to the conversation, so the more tools an agent uses, the longer the history grows.</p>
+
+</section>
+<div class="pager"><button data-go="agent">Back: What is an agent?</button><button class="primary" data-go="harness">Next: Harness</button></div>
+</div>
+
+<div id="part-harness" hidden>
+<h2 class="part-title">The harness</h2>
+<p class="lead">In the last lesson, a computer read the AI’s request and ran the tool. That computer program has a name: the <b>harness</b>. The AI is the brain. The harness is everything around it that lets it get work done.</p>
+
+<section>
+  <h3>Step 1: Who does what?</h3>
+  <p>The AI thinks and writes text. The harness does everything else. For each job below: does the AI do it, or does the harness?</p>
+  <div class="label">Correct: <b id="hsScore">0</b> of 6</div>
+  <div id="hsJobs"></div>
+  <div class="btns"><button id="hsReset">Try again</button></div>
+ 
+</section>
+
+<section>
+  <h3>Step 2: The permission check</h3>
+  <p>The harness can also stop and ask you before something risky runs. The AI was told: <b>“Clean up my School folder.”</b> Pick a permission setting, then press “Next action” to watch the harness handle each request.</p>
+  <div class="label">Permission setting</div>
+  <div class="btns" id="hmModes" style="margin-top:0"></div>
+  <div class="label" id="hmLabel">Actions done: 0 of 3</div>
+  <div class="stage" id="hmLog" aria-live="polite"><span class="note">Pick a permission setting first.</span></div>
+  <div class="btns" id="hmChoice" hidden>
+    <button class="primary" id="hmAllow">Allow</button>
+    <button id="hmDeny">Deny</button>
+  </div>
+  <div class="btns">
+    <button class="primary" id="hmNext">Next action</button>
+    <button id="hmReset">Start over</button>
+  </div>
+  <div class="answer" id="hmAns" aria-live="polite"></div>
+  <p class="note" style="margin-top:12px">Try each setting and compare what happens.</p>
+</section>
+
+<section>
+  <h3>Why this matters</h3>
+  <p><b>The harness is everything except the AI.</b> It runs the loop, runs the tools, keeps the chat history and decides what the AI gets to read.</p>
+  <p><b>Same AI, different harness.</b> A homework helper and a coding assistant can use the same AI model. But, they behave differently because their harnesses give the AI different tools and different rules.</p>
+  <p><b>Safety lives in the harness.</b> The AI can ask for anything, but the harness decides what actually runs.</p>
+
+</section>
+<div class="pager"><button data-go="tools">Back: Tools</button><button class="primary" data-go="mcp">Next: MCP</button></div>
+</div>
+
+<div id="part-mcp" hidden>
+<h2 class="part-title">MCP</h2>
+<p class="lead">Imagine you ask an agent to write an essay and then email it to your Gmail address. The AI can write the essay, because that’s just text. But it can’t send an email by itself. It needs a tool. Where does the tool come from?</p>
+
+<section>
+  <h3>Step 1: Two ways to get the tool</h3>
+  <p>To send the email, the agent needs a tool. There are two ways to get one. Pick a way to see what you’d have to do, then run the agent.</p>
+  <div class="btns" id="mcPaths"></div>
+  <div class="stage" id="mcOut" aria-live="polite"><span class="note">Pick a way above.</span></div>
+  <div class="btns"><button class="primary" id="mcRun">Run the agent</button></div>
+  
+  <p><b>MCP</b> stands for <b>Model Context Protocol</b>. A protocol is an agreed set of rules, like a common language. An MCP server is where a service makes its tools available. A harness can connect to an MCP server only if it follows the connection rules. When a connection is made, the harness can access the tools that are provided by that MCP Server.</p>
+</section>
+
+<section>
+  <h3>Step 2: Connect some servers</h3>
+  <p>Each MCP server shares a set of tools. When you connect one, the harness asks it what it can do. The server replies with its tools, and the harness adds them to the tool list the AI reads. Connect some servers and watch the number of available tools increase.</p>
+  <div class="btns" id="mcServers"></div>
+  <p class="note" id="mcMsg" aria-live="polite">Pick a server above.</p>
+  <div class="label">Tool list: <b id="mcUsed">0</b> of 120 tokens used</div>
+  <div class="meter" id="mcMeter"><div style="width:0"></div></div>
+  <div class="stage" id="mcList" aria-live="polite"><span class="note">No tools yet. Connect a server above.</span></div>
+  <p class="note" style="margin-top:12px">More servers means more reach, but every tool on the list takes up room in the context window. The numbers are made up, and the window is tiny so you can see it fill.</p>
+</section>
+
+<section>
+  <h3>Why this matters</h3>
+  <p><b>Reuse instead of rebuild.</b> Building your own tool takes real work. With MCP, someone else has already built the tool and keeps it working.</p>
+  <p><b>More reach.</b> An agent can use tools that live on other computers, like Gmail, a calendar, a company’s database or a weather service.</p>
+  <p><b>The AI doesn’t know about MCP.</b> It only sees a tool list. The harness handles the connection, and the list simply gets longer.</p>
+  <p><b>Only connect servers you trust.</b> An MCP server is someone else’s software, and your agent will use it with your account info.</p>
+</section>
+<div class="pager"><button data-go="harness">Back: Harness</button><button class="primary" data-go="skills">Next: Skills</button></div>
+</div>
+
+<div id="part-skills" hidden>
+<h2 class="part-title">Skills</h2>
+<p class="lead">Skills show agents how to do a job well. Imagine a student wanted an agent to write a lab report the way the teacher likes it: the right sections, the right style, the right table layout. The AI doesn’t know the teacher’s rules. How does that student show the agent what to do step-by-step?</p>
+
+<section>
+  <h3>What is a skill?</h3>
+  <p>A <b>skill</b> is a folder of instructions that shows an AI how to do one specific task. Every skill folder has a file called <b>SKILL.md</b>, which starts with a short name and description, followed by the full instructions. The folder can also contain other files.</p>
+  <p>Like tools, the available skills are listed in the system message, but only by name and description. When you ask the AI to do something, like write a lab report, the AI sees that the “lab-report” skill fits this request. It then reads the instructions that are in that skill folder.</p>
+</section>
+
+<section>
+  <h3>Step 1: What’s inside a skill?</h3>
+  <p>Here is the lab-report skill folder. Press the button to watch the agent use it in stages.</p>
+  <div class="line">lab-report/
+  SKILL.md
+  example-table.md</div>
+  <div class="pills" aria-hidden="true">
+    <span class="pill" id="s-You">You</span><span class="arrow">→</span>
+    <span class="pill" id="s-AI">AI</span><span class="arrow">⇄</span>
+    <span class="pill" id="s-Harness">Harness</span>
+  </div>
+  <div class="label" id="skLabel">Step 0 of 7</div>
+  <div class="stage" id="skLog" aria-live="polite"><span class="note">Press “Next step” to start.</span></div>
+  <div class="btns">
+    <button class="primary" id="skNext">Next step</button>
+    <button id="skReset">Start over</button>
+  </div>
+  <div class="answer" id="skAns" aria-live="polite"></div>
+  <p class="note" style="margin-top:12px">The steps are simplified, but this is how skills are loaded in stages.</p>
+</section>
+
+<section>
+  <h3>Step 2: A skill you can read</h3>
+  <p>Here is a real SKILL.md file. It belongs to a very simple skill called <b>joke-teller</b>. Notice the two parts: the name and description at the top, then the instructions below.</p>
+  <div class="file">
+    <div class="file-h">joke-teller/SKILL.md</div>
+    <div class="blk top"><div class="blk-label">Always loaded: name and description</div>---
+name: joke-teller
+description: Tells jokes. Use this skill when the user asks for a joke, something funny, or wants to be entertained.
+---</div>
+    <div class="blk"><div class="blk-label">Loaded only when the skill is used: the instructions</div># Joke Teller
+
+When this skill is active, respond with a short, clean, family-friendly joke.
+
+## Guidelines
+- Always deliver the joke in classic setup/punchline format
+- Keep it short and snappy
+- After the joke, ask the user if they want to hear another one</div>
+  </div>
+  <p>Now try it. Ask for a joke and watch the agent find the skill, load the instructions and follow them.</p>
+  <div class="stage" id="jkLog" aria-live="polite"><span class="note">Press “Tell me a joke” to start.</span></div>
+  <div class="btns">
+    <button class="primary" id="jkBtn">Tell me a joke</button>
+    <button id="jkReset">Start over</button>
+  </div>
+  <div class="answer" id="jkAns" aria-live="polite"></div>
+  <p class="note" style="margin-top:12px">Compare the AI's response to the instructions given in the SKILL.md file. You'll see that the AI followed the instructions when responding - the AI told a short joke in setup/punchline format, then asked if you want another one.</p>
+</section>
+
+<section>
+  <h3>Why this matters</h3>
+  <p><b>Skills save room in the context window.</b> Only a short name and description are always loaded. The full instructions arrive when the AI needs them, so an agent can have lots of skills without filling its window.</p>
+  <p><b>The description matters.</b> The AI picks a skill by reading its description, just like it picks a tool from the tool list.</p>
+  <p><b>Anyone can write a skill.</b> It’s just a folder with instructions.</p>
+  <p><b>Only use skills you trust.</b> A skill that's written by someone else can include malicious instructions that can cause your agent to do things you didn't expect e.g. delete your files.</p>
+</section>
+<div class="pager"><button data-go="mcp">Back: MCP</button><span></span></div>
+</div>
+</main>
+<script>
+(function(){
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+function lineHTML(ph,text,isNew){
+  return '<div class="line'+(isNew?' new':'')+'"><span class="tag t-'+ph+'">'+ph+'</span>'+esc(text)+'</div>';
+}
+
+/* Step 1 */
+var TASKS=[
+ {t:"Do I need an umbrella tomorrow?",
+  bot:"I can’t see the weather forecast, so I can only guess. Maybe pack an umbrella just in case?",
+  agent:[["Think","I need tomorrow’s forecast."],["Act","get_forecast(“tomorrow”)"],["Observe","80% chance of rain."]],
+  ans:"Yes, take an umbrella. Rain is very likely tomorrow."},
+ {t:"How many days until my exam on 12 December?",
+  bot:"I don’t know today’s date, so my answer could be wrong. Maybe around 5 weeks?",
+  agent:[["Think","I need to know today’s date first."],["Act","get_date()"],["Observe","Today is 3 November."],["Think","That’s 27 days left in November, plus 12 in December."]],
+  ans:"39 days to go."}
+];
+var tb=document.getElementById("taskBtns");
+TASKS.forEach(function(k){
+  var b=document.createElement("button");b.textContent=k.t;
+  b.onclick=function(){
+    [].forEach.call(tb.children,function(x){x.classList.remove("on")});b.classList.add("on");
+    var h='<div class="label">Chatbot: one reply, no extra steps</div>'+
+      '<div class="line new"><span class="tag t-Answer">Answer</span>'+esc(k.bot)+'</div>'+
+      '<div class="label compare-h">Agent: works in steps</div>';
+    k.agent.forEach(function(s){h+=lineHTML(s[0],s[1],true)});
+    h+=lineHTML("Answer",k.ans,true);
+    document.getElementById("cmp").innerHTML=h;
+  };
+  tb.appendChild(b);
+});
+
+/* Step 2 */
+var STEPS=[
+ ["Think","I need to find pizza places nearby."],
+ ["Act","search(“pizza near me”)"],
+ ["Observe","Found: Luigi’s and Slice Shack."],
+ ["Think","Try Luigi’s: a table for 4 at 7:00."],
+ ["Act","check_table(“Luigi’s”, 4, “7:00”)"],
+ ["Observe","No tables free at 7:00."],
+ ["Think","Try 7:30 instead."],
+ ["Act","check_table(“Luigi’s”, 4, “7:30”)"],
+ ["Observe","A table is free at 7:30."],
+ ["Think","That works. Book it."],
+ ["Act","book_table(“Luigi’s”, 4, “7:30”)"],
+ ["Observe","Booking confirmed."]
+];
+var FINAL="Done! You have a table for 4 at Luigi’s at 7:30.";
+var n=0;
+var logEl=document.getElementById("log"),nextBtn=document.getElementById("nextBtn");
+function pills(ph){
+  ["Think","Act","Observe"].forEach(function(p){
+    document.getElementById("p-"+p).classList.toggle("on",p===ph);
+  });
+}
+function renderLog(){
+  if(!n){
+    logEl.innerHTML='<span class="note">Press “Next step” to start.</span>';
+    document.getElementById("loopLabel").textContent="Loop 0 of 4";
+    document.getElementById("loopAns").textContent="";
+    pills("");nextBtn.disabled=false;return;
+  }
+  var h="";
+  for(var i=0;i<n;i++){
+    if(i%3===0)h+='<div class="label" style="margin-top:'+(i?10:0)+'px">Loop '+(i/3+1)+'</div>';
+    h+=lineHTML(STEPS[i][0],STEPS[i][1],i===n-1);
+  }
+  logEl.innerHTML=h;
+  document.getElementById("loopLabel").textContent="Loop "+(Math.floor((n-1)/3)+1)+" of 4";
+  pills(STEPS[n-1][0]);
+}
+nextBtn.onclick=function(){
+  if(n<STEPS.length){
+    n++;renderLog();
+    if(n===STEPS.length){
+      nextBtn.disabled=true;pills("");
+      document.getElementById("loopAns").innerHTML=
+        '<span class="tag t-Answer">Answer</span>'+esc(FINAL)+
+        '<p class="note" style="margin-top:8px;font-weight:400">The agent decided the goal was met and stopped the loop. Notice that nobody told it to try 7:30.</p>';
+    }
+  }
+};
+document.getElementById("resetBtn").onclick=function(){n=0;renderLog()};
+})();
+(function(){
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+function lineHTML(ph,text,isNew){
+  return '<div class="line'+(isNew?' new':'')+'"><span class="tag t-'+ph+'">'+ph+'</span>'+esc(text)+'</div>';
+}
+
+/* Step 1 */
+var TOOLS=[{k:"calc",n:"Calculator"},{k:"weather",n:"Weather"},{k:"clock",n:"Clock"}];
+var on={calc:false,weather:false,clock:false},last=null;
+var QS=[
+ {t:"What’s 4,817 × 362?",need:"calc",
+  noTool:"I’ll estimate: about 1.7 million. I could be off, because I can’t do exact sums reliably.",
+  steps:[["Think","This needs exact maths. I should use the calculator."],["Act","calculator(“4817 × 362”)"],["Observe","1743754"]],
+  ans:"4,817 × 362 = 1,743,754."},
+ {t:"Is it raining in Paris right now?",need:"weather",
+  noTool:"I can’t check the weather, so I don’t know. Any answer would be a guess.",
+  steps:[["Think","I need live weather for Paris."],["Act","get_weather(“Paris”)"],["Observe","Light rain, 11°C."]],
+  ans:"Yes, there is light rain in Paris right now."},
+ {t:"What time is it right now?",need:"clock",
+  noTool:"I can’t see a clock, so I don’t know the time.",
+  steps:[["Think","I need the current time."],["Act","get_time()"],["Observe","4:45 PM"]],
+  ans:"It’s 4:45 PM."},
+ {t:"Write a two-line rhyme about autumn.",need:null,
+  direct:"Orange leaves fall to the ground, autumn whispers without a sound."}
+];
+function toolName(k){return TOOLS.filter(function(t){return t.k===k})[0].n}
+function render1(){
+  var out=document.getElementById("tlOut"),c=0;
+  for(var k in on)if(on[k])c++;
+  document.getElementById("tlCount").textContent=c;
+  if(last===null){out.innerHTML='<span class="note">Pick a question above.</span>';return}
+  var q=QS[last],h='';
+  if(!q.need){
+    h=lineHTML("Answer",q.direct,true)+'<p class="note" style="margin:8px 0 0">No tool needed. Writing text is what the AI does best.</p>';
+  }else if(on[q.need]){
+    q.steps.forEach(function(s){h+=lineHTML(s[0],s[1],true)});
+    h+=lineHTML("Answer",q.ans,true);
+  }else{
+    h=lineHTML("Answer",q.noTool,true)+'<p class="note" style="margin:8px 0 0">The '+toolName(q.need)+' tool is switched off. Switch it on and ask again.</p>';
+  }
+  out.innerHTML=h;
+}
+var tg=document.getElementById("tlToggles");
+TOOLS.forEach(function(t){
+  var b=document.createElement("button");
+  function label(){b.textContent=t.n+": "+(on[t.k]?"on":"off");b.setAttribute("aria-pressed",on[t.k]);b.classList.toggle("on",on[t.k])}
+  label();
+  b.onclick=function(){on[t.k]=!on[t.k];label();render1()};
+  tg.appendChild(b);
+});
+var qb=document.getElementById("tlQs");
+QS.forEach(function(q,i){
+  var b=document.createElement("button");b.textContent=q.t;
+  b.onclick=function(){
+    [].forEach.call(qb.children,function(x){x.classList.remove("on")});b.classList.add("on");
+    last=i;render1();
+  };
+  qb.appendChild(b);
+});
+
+/* Step 2 */
+var FLOW=[
+ ["You","Do I need an umbrella in Paris tomorrow?"],
+ ["AI","Checks its tool list and sees get_forecast, which needs a city and a day."],
+ ["AI","Writes a request with that information: get_forecast(“Paris”, “tomorrow”). That’s only text. The AI can’t run anything itself."],
+ ["Computer","Reads the request and runs the tool."],
+ ["Computer","Gets the tool’s result, “80% chance of rain,” and sends it back to the AI."],
+ ["AI","Reads the result and writes the answer: “Yes, take an umbrella. Rain is likely.”"]
+];
+var fn=0,tcNext=document.getElementById("tcNext");
+function pills2(a){
+  ["You","AI","Computer"].forEach(function(p){document.getElementById("a-"+p).classList.toggle("on",p===a)});
+}
+function render2(){
+  var log=document.getElementById("tcLog");
+  document.getElementById("tcLabel").textContent="Step "+fn+" of "+FLOW.length;
+  if(!fn){
+    log.innerHTML='<span class="note">Press “Next step” to start.</span>';
+    document.getElementById("tcAns").textContent="";pills2("");tcNext.disabled=false;return;
+  }
+  var h="";
+  for(var i=0;i<fn;i++)h+=lineHTML(FLOW[i][0],FLOW[i][1],i===fn-1);
+  log.innerHTML=h;pills2(FLOW[fn-1][0]);
+}
+tcNext.onclick=function(){
+  if(fn<FLOW.length){
+    fn++;render2();
+    if(fn===FLOW.length){
+      tcNext.disabled=true;
+      document.getElementById("tcAns").innerHTML='The AI never ran the tool. It wrote the request, and a computer did the work.';
+    }
+  }
+};
+document.getElementById("tcReset").onclick=function(){fn=0;render2()};
+})();
+(function(){
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+function lineHTML(ph,text,isNew){
+  return '<div class="line'+(isNew?' new':'')+'"><span class="tag t-'+ph+'">'+ph+'</span>'+esc(text)+'</div>';
+}
+
+/* Step 1 */
+var JOBS=[
+ {t:"Decide what to do next",a:"AI",why:"Choosing the next step is the AI’s job."},
+ {t:"Run a tool",a:"Harness",why:"The AI only writes the request. The harness runs it."},
+ {t:"Keep the chat history and send it back every time",a:"Harness",why:"The AI doesn’t remember anything. The harness keeps the history and re-sends it."},
+ {t:"Write the final answer",a:"AI",why:"Writing text is what the AI does."},
+ {t:"Call the AI again until the job is done",a:"Harness",why:"The AI does one step at a time. The harness keeps the loop going."},
+ {t:"Pause and ask you before a risky action",a:"Harness",why:"The AI can only ask for things. The harness decides whether a request gets to run."}
+];
+var score=0;
+function buildJobs(){
+  score=0;document.getElementById("hsScore").textContent=0;
+  var box=document.getElementById("hsJobs");box.innerHTML="";
+  JOBS.forEach(function(j){
+    var d=document.createElement("div");d.className="job";
+    d.innerHTML='<div>'+esc(j.t)+'</div><div class="btns"></div><div class="res" aria-live="polite"></div>';
+    var bs=d.querySelector(".btns"),res=d.querySelector(".res");
+    ["AI","Harness"].forEach(function(who){
+      var b=document.createElement("button");b.textContent=who;
+      b.onclick=function(){
+        [].forEach.call(bs.children,function(x){x.disabled=true});
+        var ok=(who===j.a);
+        if(ok){score++;document.getElementById("hsScore").textContent=score}
+        res.className="res "+(ok?"ok":"no");
+        res.textContent=(ok?"✓ Correct. ":"✗ Not quite. It’s the "+j.a+". ")+j.why;
+      };
+      bs.appendChild(b);
+    });
+    box.appendChild(d);
+  });
+}
+buildJobs();
+document.getElementById("hsReset").onclick=buildJobs;
+
+/* Step 2 */
+var PLAN=[
+ {call:"list_files(“School”)",risky:false,res:"Found 2 folders: Old stuff, Final essay."},
+ {call:"delete_folder(“Old stuff”)",risky:true,res:"Folder deleted.",del:"Old stuff"},
+ {call:"delete_folder(“Final essay”)",risky:true,res:"Folder deleted.",del:"Final essay"}
+];
+var MODES=[{k:"all",n:"Ask me every time"},{k:"risky",n:"Ask me for risky actions"},{k:"never",n:"Never ask"}];
+var mode=null,idx=0,lines=[],deleted=[],denied=[],waiting=false;
+var nextB=document.getElementById("hmNext"),choice=document.getElementById("hmChoice");
+function render(){
+  var log=document.getElementById("hmLog");
+  document.getElementById("hmLabel").textContent="Actions done: "+idx+" of "+PLAN.length;
+  if(!mode){log.innerHTML='<span class="note">Pick a permission setting first.</span>'}
+  else if(!lines.length){log.innerHTML='<span class="note">Press “Next action” to start.</span>'}
+  else{
+    log.innerHTML=lines.map(function(l,i){return lineHTML(l[0],l[1],i>=lines.length-(l.fresh||1))}).join("");
+  }
+  choice.hidden=!waiting;
+  nextB.disabled=waiting||idx>=PLAN.length;
+}
+function restart(){idx=0;lines=[];deleted=[];denied=[];waiting=false;document.getElementById("hmAns").textContent=""}
+function finish(){
+  if(idx<PLAN.length)return;
+  var t;
+  if(deleted.indexOf("Final essay")>-1){
+    t="Your Final essay folder was deleted. The AI mistook it for clutter. It ran because "+(mode==="never"?"nothing checked it.":"you allowed it.");
+  }else{
+    t="You caught the AI’s mistake, so the Final essay folder is safe.";
+  }
+  var m={all:"Asking every time is safe, but even the harmless step stopped to ask you.",
+    risky:"Safe steps ran on their own, and only the risky ones stopped for you.",
+    never:"Never asking is the fastest, but nothing stood between the AI’s mistake and your files."};
+  document.getElementById("hmAns").innerHTML=esc(t)+'<p class="note" style="margin-top:6px;font-weight:400">'+esc(m[mode])+'</p>';
+}
+function runIt(a){
+  lines.push(["Harness","Runs it."]);lines.push(["Observe",a.res]);
+  if(a.del)deleted.push(a.del);
+  idx++;waiting=false;render();finish();
+}
+var mb=document.getElementById("hmModes");
+MODES.forEach(function(m){
+  var b=document.createElement("button");b.textContent=m.n;
+  b.onclick=function(){
+    [].forEach.call(mb.children,function(x){x.classList.remove("on")});b.classList.add("on");
+    restart();mode=m.k;render();
+  };
+  mb.appendChild(b);
+});
+nextB.onclick=function(){
+  if(!mode){document.getElementById("hmLog").innerHTML='<span class="note">Pick a permission setting first, above.</span>';return}
+  var a=PLAN[idx];
+  lines.push(["AI","Wants to run: "+a.call]);
+  if(mode==="all"||(mode==="risky"&&a.risky)){
+    lines.push(["Harness","Pauses and asks you: allow this?"]);
+    waiting=true;render();
+  }else{runIt(a)}
+};
+document.getElementById("hmAllow").onclick=function(){
+  lines.push(["You","Allow."]);runIt(PLAN[idx]);
+};
+document.getElementById("hmDeny").onclick=function(){
+  var a=PLAN[idx];
+  lines.push(["You","Deny."]);
+  lines.push(["Harness","Does not run it. Tells the AI: the user said no."]);
+  lines.push(["AI","OK, I’ll skip that."]);
+  if(a.del)denied.push(a.del);
+  idx++;waiting=false;render();finish();
+};
+document.getElementById("hmReset").onclick=function(){restart();render()};
+render();
+})();
+(function(){
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+
+function lineHTML(ph,text,isNew){
+  return '<div class="line'+(isNew?' new':'')+'"><span class="tag t-'+ph+'">'+ph+'</span>'+esc(text)+'</div>';
+}
+
+/* Step 1 */
+var path=null,ran=false;
+var PATHS={
+ build:{n:"Build the tool yourself",effort:"Lots of work, and it’s yours to look after.",
+  jobs:["Write the code that talks to Gmail.","Set up safe sign-in so the tool can use your account.","Describe the tool to the AI: its name, what it does and what it needs (to, subject, body).","Keep it working when Gmail changes."],
+  note:"The tool worked because you built it. You’ll need to keep it working too."},
+ mcp:{n:"Connect an MCP server",effort:"A few steps. Someone else already built the tool.",
+  jobs:["Find an MCP server for Gmail.","Connect it to the harness.","Sign in to your own account."],
+  note:"The tool worked because someone else built it and looks after it. It lives on another computer, and MCP let the harness reach it."}
+};
+var RUN=[
+ ["Think","First I’ll write the essay. That’s only text, so I don’t need a tool."],
+ ["Think","Now I need to email it. I’ll use send_email."],
+ ["Act","send_email(to=“you@gmail.com”, subject=“My essay”, body=“…”)"],
+ ["Harness","Pauses and asks you: allow this email to be sent?"],
+ ["You","Allow."],
+ ["Observe","Email sent."],
+ ["Answer","Done! I wrote your essay and emailed it to your Gmail address."]
+];
+function render1(){
+  var out=document.getElementById("mcOut");
+  if(!path){out.innerHTML='<span class="note">Pick a way above.</span>';return}
+  var p=PATHS[path],h='<div class="label">What you’d have to do</div>';
+  p.jobs.forEach(function(j,i){h+='<div class="line">'+(i+1)+'. '+esc(j)+'</div>'});
+  h+='<p class="note" style="margin:8px 0 0"><b>'+esc(p.effort)+'</b></p>';
+  if(ran){
+    h+='<div class="label" style="margin-top:12px">What the agent does</div>';
+    RUN.forEach(function(s,i){h+=lineHTML(s[0],s[1],i===RUN.length-1)});
+    h+='<p class="note" style="margin:8px 0 0">'+esc(p.note)+'</p>';
+  }
+  out.innerHTML=h;
+}
+var pb=document.getElementById("mcPaths");
+Object.keys(PATHS).forEach(function(k){
+  var b=document.createElement("button");b.textContent=PATHS[k].n;
+  b.onclick=function(){
+    [].forEach.call(pb.children,function(x){x.classList.remove("on")});b.classList.add("on");
+    path=k;ran=false;render1();
+  };
+  pb.appendChild(b);
+});
+document.getElementById("mcRun").onclick=function(){
+  if(!path){document.getElementById("mcOut").innerHTML='<span class="note">Pick a way above first.</span>';return}
+  ran=true;render1();
+};
+
+/* Step 2 */
+var LIMIT=120,COL=["--c3","--c2","--c1","--c4"];
+var SERVERS=[
+ {k:"Weather",tools:[["get_forecast","city, day","Looks up the weather forecast.",16],["get_weather_now","city","Gets the current weather.",14]]},
+ {k:"Calendar",tools:[["list_events","day","Lists your events for a day.",13],["add_event","title, time","Adds an event to your calendar.",17]]},
+ {k:"Maps",tools:[["find_route","from, to","Finds a route between two places.",15],["find_places","query, city","Finds places such as cafés.",16]]},
+ {k:"Gmail",tools:[["read_inbox","nothing","Lists your newest emails.",12],["send_email","to, subject, body","Sends an email.",18]]}
+];
+var conn={};
+function render2(){
+  var used=0,h='';
+  SERVERS.forEach(function(s,si){
+    if(!conn[s.k])return;
+    s.tools.forEach(function(t){
+      used+=t[3];
+      h+='<div class="line"><span class="tk">'+t[3]+' tokens</span><span class="tag" style="background:var('+COL[si]+')">'+s.k+'</span>'+
+         esc(t[0]+": "+t[2]+" Needs: "+t[1]+".")+'</div>';
+    });
+  });
+  document.getElementById("mcList").innerHTML=h||'<span class="note">No tools yet. Connect a server above.</span>';
+  document.getElementById("mcUsed").textContent=used;
+  var m=document.getElementById("mcMeter");
+  m.firstElementChild.style.width=Math.min(100,used/LIMIT*100)+"%";
+  m.classList.toggle("full",used>=LIMIT);
+}
+var sb=document.getElementById("mcServers"),msg=document.getElementById("mcMsg");
+SERVERS.forEach(function(s){
+  var b=document.createElement("button");
+  function label(){b.textContent=s.k+": "+(conn[s.k]?"connected":"not connected");b.setAttribute("aria-pressed",!!conn[s.k]);b.classList.toggle("on",!!conn[s.k])}
+  label();
+  b.onclick=function(){
+    conn[s.k]=!conn[s.k];label();render2();
+    var tot=0;SERVERS.forEach(function(x){if(conn[x.k])x.tools.forEach(function(t){tot+=t[3]})});
+    if(conn[s.k])msg.textContent="The harness asks the "+s.k+" server: what tools do you have? The server lists "+s.tools.length+" tools, and the harness adds them to the list.";
+    else msg.textContent="The harness removes the "+s.k+" tools from the list.";
+    if(tot>=LIMIT)msg.textContent+=" The tool list now fills the whole window, so there’s no room left for the chat.";
+  };
+  sb.appendChild(b);
+});
+})();
+(function(){
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+function lineHTML(ph,text,isNew){
+  return '<div class="line'+(isNew?' new':'')+'"><span class="tag t-'+ph+'">'+ph+'</span>'+esc(text)+'</div>';
+}
+
+/* Step 1 */
+var FLOW=[
+ ["Harness","At the start, gives the AI only the skill list e.g. lab-report: Helps write lab reports in the school format."],
+ ["You","Write my lab report on plant growth."],
+ ["AI","The lab-report skill fits this job. I’ll load it."],
+ ["Harness","Loads SKILL.md: the full instructions, such as the sections to use, the style and what to include."],
+ ["AI","The instructions mention an example table. I’ll open example-table.md."],
+ ["Harness","Loads that extra file, only because the AI asked for it."],
+ ["AI","Writes the report, following the instructions."]
+];
+var fn=0,skNext=document.getElementById("skNext");
+function pills(a){
+  ["You","AI","Harness"].forEach(function(p){document.getElementById("s-"+p).classList.toggle("on",p===a)});
+}
+function render2(){
+  var log=document.getElementById("skLog");
+  document.getElementById("skLabel").textContent="Step "+fn+" of "+FLOW.length;
+  if(!fn){
+    log.innerHTML='<span class="note">Press “Next step” to start.</span>';
+    document.getElementById("skAns").textContent="";pills("");skNext.disabled=false;return;
+  }
+  var h="";
+  for(var i=0;i<fn;i++)h+=lineHTML(FLOW[i][0],FLOW[i][1],i===fn-1);
+  log.innerHTML=h;pills(FLOW[fn-1][0]);
+}
+skNext.onclick=function(){
+  if(fn<FLOW.length){
+    fn++;render2();
+    if(fn===FLOW.length){
+      skNext.disabled=true;
+      document.getElementById("skAns").textContent="The AI only read what it needed, when it needed it.";
+    }
+  }
+};
+document.getElementById("skReset").onclick=function(){fn=0;render2()};
+})();
+(function(){
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+function lineHTML(ph,text,isNew){
+  return '<div class="line'+(isNew?' new':'')+'"><span class="tag t-'+ph+'">'+ph+'</span>'+esc(text)+'</div>';
+}
+var JOKES=[
+ ["Why don’t scientists trust atoms?","Because they make up everything!"],
+ ["What do you call a fish wearing a bowtie?","Sofishticated!"],
+ ["Why did the scarecrow win an award?","Because he was outstanding in his field!"]
+];
+var chat=[],loaded=false,bag=[],last=-1,told=0,ans=document.getElementById("jkAns"),btn=document.getElementById("jkBtn"),log=document.getElementById("jkLog");
+function nextJoke(){
+  if(!bag.length){
+    bag=[0,1,2].sort(function(){return Math.random()-.5});
+    if(bag[bag.length-1]===last)bag.unshift(bag.pop());
+  }
+  last=bag.pop();return JOKES[last];
+}
+function render(from){
+  var h="";
+  chat.forEach(function(l,i){h+=lineHTML(l[0],l[1],i>=from)});
+  log.innerHTML=h||'<span class="note">Press “Tell me a joke” to start.</span>';
+}
+btn.onclick=function(){
+  var from=chat.length,j=nextJoke();
+  if(!loaded){
+    chat.push(["Harness","At the start, gives the AI only the skill list e.g. joke-teller: Tells jokes. Use this skill when the user asks for a joke."]);
+    chat.push(["You","Tell me a joke."]);
+    chat.push(["AI","The joke-teller skill fits this job. I’ll load it."]);
+    chat.push(["Harness","Loads SKILL.md: the full instructions for telling a joke."]);
+    loaded=true;
+  }else{
+    chat.push(["You","Yes, another one!"]);
+  }
+  chat.push(["AI",j[0]]);
+  chat.push(["AI",j[1]]);
+  chat.push(["AI","Want to hear another one?"]);
+  render(from);
+  told++;
+  if(told>=JOKES.length){
+    btn.disabled=true;
+    ans.textContent="That’s all three jokes! Press “Start over” to try again.";
+  }else btn.textContent="Yes, another one!";
+  log.lastChild.scrollIntoView({block:"nearest"});
+};
+document.getElementById("jkReset").onclick=function(){
+  chat=[];loaded=false;bag=[];last=-1;told=0;btn.disabled=false;ans.textContent="";btn.textContent="Tell me a joke";render(0);
+};
+})();
+(function(){
+var parts=["agent","tools","harness","mcp","skills"];
+function go(id){
+  parts.forEach(function(p){document.getElementById("part-"+p).hidden=(p!==id)});
+  [].forEach.call(document.querySelectorAll(".tabs [data-go]"),function(b){
+    if(b.getAttribute("data-go")===id)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current");
+  });
+  window.scrollTo(0,0);
+}
+[].forEach.call(document.querySelectorAll("[data-go]"),function(b){
+  b.onclick=function(){go(b.getAttribute("data-go"))};
+});
+})();
+</script>
+</body>
+</html>

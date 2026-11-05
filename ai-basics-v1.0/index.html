@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Basics - Quick interactive tutorials for non-programmers.</title>
+ <meta name="description" content="Foundational AI concepts explained quickly using simple language. Open source, no ads, no signup, and no app download required. Start learning instantly.">
+ 
+<style>
+:root{
+  --bg:#f3f6fb; --surface:#ffffff; --ink:#14213d; --muted:#55627f; --line:#d5dcea;
+  --accent:#2f5bea; --accent-ink:#ffffff; --chip-ink:#14213d;
+  --c1:#ffd6a5; --c2:#caffbf; --c3:#a0c4ff; --c4:#ffc6ff; --c5:#fdffb6;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1730; --surface:#18233f; --ink:#eaf0ff; --muted:#a6b3d1; --line:#2c3a5e;
+    --accent:#7c9bff; --accent-ink:#0f1730;
+  }
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:16px}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif;line-height:1.55}
+main{max-width:880px;margin:0 auto;padding:56px 20px 40px}
+
+.hero{margin-bottom:48px}
+h1{margin:0;font-size:clamp(2.8rem,10vw,5.4rem);line-height:1.15;font-weight:800;letter-spacing:-.01em}
+.chip{display:inline-block;color:var(--chip-ink);border-radius:12px;padding:0 .18em;
+  margin-right:.06em;white-space:pre}
+.chip:nth-child(5n+1){background:var(--c1)}
+.chip:nth-child(5n+2){background:var(--c2)}
+.chip:nth-child(5n+3){background:var(--c3)}
+.chip:nth-child(5n+4){background:var(--c4)}
+.chip:nth-child(5n+5){background:var(--c5)}
+footer{margin-top:48px;padding-top:20px;border-top:2px solid var(--line)}
+.repo{color:var(--accent);font-weight:700;text-decoration:none}
+.repo:hover{text-decoration:none;filter:brightness(1.15)}
+.sub{font-size:1.35rem;margin:18px 0 0;max-width:30ch;color:var(--muted)}
+
+.modules{display:grid;gap:24px}
+@media (min-width:760px){.modules{grid-template-columns:1fr 1fr}}
+.module{background:var(--surface);border:2px solid var(--line);border-radius:18px;
+  padding:24px;display:flex;flex-direction:column}
+.module h2{margin:0 0 6px;font-size:1.5rem}
+.module p{margin:0 0 16px;color:var(--muted)}
+.lessons{list-style:none;margin:0 0 22px;padding:0;display:grid;gap:8px}
+.lessons li{display:flex;gap:10px;align-items:center;border:2px solid var(--line);
+  border-radius:12px;padding:8px 12px;font-weight:700}
+.lessons b{display:inline-grid;place-items:center;min-width:1.7em;height:1.7em;border-radius:8px;
+  background:var(--c3);color:var(--chip-ink);font-size:.9rem}
+.module:nth-child(2) .lessons b{background:var(--c2)}
+.go{margin-top:auto;display:inline-block;text-align:center;text-decoration:none;font-weight:700;
+  background:var(--accent);color:var(--accent-ink);border-radius:12px;padding:12px 18px}
+.go:hover{filter:brightness(1.08)}
+a:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+
+</style>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <h1 aria-label="AI Basics"><span class="chip" aria-hidden="true">AI</span> <span class="chip" aria-hidden="true">Basics</span></h1>
+    <p class="sub">Quick interactive tutorials for non-programmers.</p>
+  </header>
+
+  <div class="modules">
+    <section class="module" aria-labelledby="m1">
+      <h2 id="m1">How AI chatbots work</h2>
+      <p>See how a chatbot reads your messages, how it remembers, and what happens before it answers.</p>
+      <ol class="lessons">
+        <li><b>1</b>Tokens</li>
+        <li><b>2</b>Chat history</li>
+        <li><b>3</b>System message</li>
+        <li><b>4</b>Thinking</li>
+      </ol>
+      <a class="go" href="module1.html">Start module 1</a>
+    </section>
+
+    <section class="module" aria-labelledby="m2">
+      <h2 id="m2">How AI agents work</h2>
+      <p>Learn how an AI goes from answering questions to completing tasks.</p>
+      <ol class="lessons">
+        <li><b>1</b>What is an agent?</li>
+        <li><b>2</b>Tools</li>
+        <li><b>3</b>Harness</li>
+        <li><b>4</b>MCP</li>
+        <li><b>5</b>Skills</li>
+      </ol>
+      <a class="go" href="module2.html">Start module 2</a>
+    </section>
+  </div>
+
+  <footer>
+    <a class="repo" href="https://github.com/vbookshelf/AI-Basics-Tutorials" target="_blank" rel="noopener">GitHub</a>
+  </footer>
+</main>
+</body>
+</html>
