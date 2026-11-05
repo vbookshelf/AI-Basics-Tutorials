@@ -10,6 +10,10 @@ There are two learning modules:
 - <b>How AI chatbots work:</b> tokens, chat history, system messages and thinking.
 - <b>How AI agents work:</b> agents, tools, harnesses, MCP and skills.
 
+<br>
+
+<img src="images/image1.png" alt="App screenshot" height="500">
+
 
 <br>
 
