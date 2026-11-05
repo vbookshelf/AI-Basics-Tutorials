@@ -11,3 +11,11 @@ Live demo:<br>
 https://ai-basics.woza.work/
 
 <br>
+
+## Revision History
+
+Version 1.0<br>
+5-Nov-2026<br>
+- First release.
+
+<br>
