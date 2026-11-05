@@ -16,6 +16,6 @@ https://ai-basics.woza.work/
 
 Version 1.0<br>
 5-Nov-2026<br>
-- First release.
+First release.
 
 <br>
